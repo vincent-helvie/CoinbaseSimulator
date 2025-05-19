@@ -1,43 +1,62 @@
-//
-//  MarketViewModel.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/19/25.
-//
-
 import Foundation
 
 class MarketViewModel: ObservableObject {
     @Published var assets: [Asset] = []
     @Published var portfolio = Portfolio(balance: 10000.0, holdings: [:])
     @Published var trades: [Trade] = []
+    @Published var isLoading: Bool = false
 
     private let api = CoinbaseAPI()
-
-    // Persistence Keys
     private let tradesKey = "simulated_trades"
     private let portfolioKey = "simulated_portfolio"
+    private var timer: Timer?
 
     init() {
         loadData()
+        startPriceUpdates()
+    }
+
+    deinit {
+        timer?.invalidate()
+    }
+
+    func startPriceUpdates() {
+        loadPrices()
+
+        timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            self?.loadPrices()
+        }
     }
 
     func loadPrices() {
+        isLoading = true
+
         let symbols = ["BTC", "ETH", "SOL"]
+        let group = DispatchGroup()
 
         for symbol in symbols {
+            group.enter()
             api.fetchPrice(for: symbol) { [weak self] price in
+                defer { group.leave() }
+
                 guard let self = self, let price = price else { return }
 
                 DispatchQueue.main.async {
-                    let asset = Asset(symbol: symbol, name: symbol, price: price)
                     if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
-                        self.assets[index] = asset
+                        var updatedAsset = self.assets[index]
+                        updatedAsset.previousPrice = updatedAsset.price
+                        updatedAsset.price = price
+                        self.assets[index] = updatedAsset
                     } else {
-                        self.assets.append(asset)
+                        let newAsset = Asset(symbol: symbol, name: symbol, price: price, previousPrice: nil)
+                        self.assets.append(newAsset)
                     }
                 }
             }
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            self?.isLoading = false
         }
     }
 

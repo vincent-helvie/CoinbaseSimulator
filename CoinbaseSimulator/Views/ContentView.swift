@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/19/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -15,7 +8,12 @@ struct ContentView: View {
             VStack {
                 Text("Balance: $\(String(format: "%.2f", viewModel.portfolio.balance))")
                     .font(.title2)
-                    .padding()
+                    .padding(.top)
+
+                if viewModel.isLoading {
+                    ProgressView("Fetching Prices...")
+                        .padding()
+                }
 
                 List {
                     Section(header: Text("Assets")) {
@@ -55,9 +53,6 @@ struct ContentView: View {
                 .listStyle(InsetGroupedListStyle())
             }
             .navigationTitle("Crypto Simulator")
-            .onAppear {
-                viewModel.loadPrices()
-            }
         }
     }
 }

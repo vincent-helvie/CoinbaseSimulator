@@ -7,9 +7,21 @@
 
 import Foundation
 
-struct Asset: Identifiable, Codable {
+struct Asset: Identifiable {
     let id = UUID()
     let symbol: String
     let name: String
-    let price: Double
+    var price: Double
+    var previousPrice: Double?
+
+    var priceChangeDirection: PriceChangeDirection {
+        guard let previous = previousPrice else { return .none }
+        if price > previous { return .up }
+        if price < previous { return .down }
+        return .none
+    }
+
+    enum PriceChangeDirection {
+        case up, down, none
+    }
 }
