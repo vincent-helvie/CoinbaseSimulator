@@ -46,6 +46,7 @@ class MarketViewModel: ObservableObject {
                         var updatedAsset = self.assets[index]
                         updatedAsset.previousPrice = updatedAsset.price
                         updatedAsset.price = price
+                        updatedAsset.flashID = UUID() // Trigger animation
                         self.assets[index] = updatedAsset
                     } else {
                         let newAsset = Asset(symbol: symbol, name: symbol, price: price, previousPrice: nil)
@@ -97,6 +98,13 @@ class MarketViewModel: ObservableObject {
 
         trades.append(trade)
         saveData()
+    }
+
+    var portfolioValue: Double {
+        assets.reduce(0.0) { total, asset in
+            let qty = portfolio.holdings[asset.symbol] ?? 0
+            return total + (qty * asset.price)
+        }
     }
 
     func saveData() {
