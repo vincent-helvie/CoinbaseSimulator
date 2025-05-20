@@ -38,22 +38,35 @@ struct PortfolioChartView: View {
 
             if filteredSnapshots.count >= 2 {
                 Chart {
+                    // Line for portfolio value
                     ForEach(filteredSnapshots) { snapshot in
                         LineMark(
                             x: .value("Time", snapshot.timestamp),
                             y: .value("Value", snapshot.value)
                         )
                         .interpolationMethod(.catmullRom)
-                        
-                        if let highlighted = highlightedSnapshot, highlighted.id == snapshot.id {
-                            PointMark(
-                                x: .value("Time", snapshot.timestamp),
-                                y: .value("Value", snapshot.value)
-                            )
-                            .foregroundStyle(.blue)
-                            .symbolSize(100)
+                    }
+
+                    // Highlight selected point, if any
+                    if let highlighted = highlightedSnapshot {
+                        PointMark(
+                            x: .value("Time", highlighted.timestamp),
+                            y: .value("Value", highlighted.value)
+                        )
+                        .foregroundStyle(.blue)
+                        .symbolSize(100)
+                        .annotation(position: .top, alignment: .center) {
+                            Text("$\(String(format: "%.2f", highlighted.value))")
+                                .font(.caption)
+                                .padding(4)
+                                .background(Color(.systemBackground))
+                                .cornerRadius(6)
+                                .shadow(radius: 2)
                         }
                     }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading)
                 }
                 .chartOverlay { proxy in
                     GeometryReader { geometry in
@@ -79,6 +92,7 @@ struct PortfolioChartView: View {
                     }
                 }
                 .frame(height: 220)
+                .animation(.easeInOut(duration: 0.3), value: selectedTimeframe)
             } else {
                 Text("Not enough data yet to display chart.")
                     .font(.footnote)
@@ -96,15 +110,8 @@ struct PortfolioChartView: View {
 
     func formatted(_ date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .none
+        formatter.dateStyle = selectedTimeframe == "7d" ? .short : .none
         formatter.timeStyle = .short
-
-        switch selectedTimeframe {
-        case "7d":
-            formatter.dateStyle = .short
-        default:
-            break
-        }
         return formatter.string(from: date)
     }
 }
