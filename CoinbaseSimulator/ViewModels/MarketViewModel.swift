@@ -74,7 +74,6 @@ class MarketViewModel: ObservableObject {
 
         group.notify(queue: .main) {
             self.lastUpdated = Date()
-
             let snapshot = PortfolioSnapshot(timestamp: Date(), value: self.portfolioValue)
             self.portfolioHistory.append(snapshot)
             self.trimHistoryIfNeeded()
@@ -135,8 +134,6 @@ class MarketViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Portfolio History Persistence
-
     private func trimHistoryIfNeeded() {
         if portfolioHistory.count > 500 {
             portfolioHistory.removeFirst(portfolioHistory.count - 500)
@@ -156,8 +153,6 @@ class MarketViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Trading and Portfolio
-
     func buy(asset: Asset, amountUSD: Double) {
         let quantity = amountUSD / asset.price
         guard amountUSD <= portfolio.balance else { return }
@@ -165,7 +160,14 @@ class MarketViewModel: ObservableObject {
         portfolio.balance -= amountUSD
         portfolio.holdings[asset.symbol, default: 0] += quantity
 
-        let trade = Trade(asset: asset.symbol, isBuy: true, quantity: quantity, price: asset.price, timestamp: Date())
+        let trade = Trade(
+            asset: asset.symbol,
+            isBuy: true,
+            quantity: quantity,
+            price: asset.price,
+            timestamp: Date()
+        )
+
         trades.append(trade)
         saveData()
     }
@@ -182,7 +184,14 @@ class MarketViewModel: ObservableObject {
         portfolio.balance += amountUSD
         portfolio.holdings[asset.symbol] = currentQty - quantity
 
-        let trade = Trade(asset: asset.symbol, isBuy: false, quantity: quantity, price: asset.price, timestamp: Date())
+        let trade = Trade(
+            asset: asset.symbol,
+            isBuy: false,
+            quantity: quantity,
+            price: asset.price,
+            timestamp: Date()
+        )
+
         trades.append(trade)
         saveData()
     }
@@ -198,6 +207,13 @@ class MarketViewModel: ObservableObject {
             let qty = portfolio.holdings[asset.symbol] ?? 0
             return total + (qty * asset.price)
         }
+    }
+
+    func averageBuyPrice(for symbol: String) -> Double? {
+        let buys = trades.filter { $0.asset == symbol && $0.isBuy }
+        let totalSpent = buys.reduce(0.0) { $0 + ($1.price * $1.quantity) }
+        let totalQty = buys.reduce(0.0) { $0 + $1.quantity }
+        return totalQty > 0 ? totalSpent / totalQty : nil
     }
 
     func saveData() {

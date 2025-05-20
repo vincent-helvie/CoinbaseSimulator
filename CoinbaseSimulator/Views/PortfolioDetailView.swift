@@ -1,10 +1,3 @@
-//
-//  PortfolioDetailView.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/20/25.
-//
-
 import SwiftUI
 
 struct PortfolioDetailView: View {
@@ -13,26 +6,33 @@ struct PortfolioDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // 🔹 Summary Cards
                 HStack(spacing: 12) {
                     SummaryCard(title: "Total Value", value: "$\(String(format: "%.2f", viewModel.portfolioValue))")
                     SummaryCard(title: "Cash", value: "$\(String(format: "%.2f", viewModel.portfolio.balance))")
                 }
+                .padding(.horizontal)
 
-                // 🔹 Portfolio Chart
                 PortfolioChartView(snapshots: viewModel.portfolioHistory)
 
-                // 🔹 Holdings Breakdown
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Your Holdings")
                         .font(.headline)
-                        .padding(.leading, 8)
+                        .padding(.horizontal)
 
                     ForEach(viewModel.assets.filter { (viewModel.portfolio.holdings[$0.symbol] ?? 0) > 0 }) { asset in
-                        HoldingCard(asset: asset, quantity: viewModel.portfolio.holdings[asset.symbol] ?? 0, totalValue: viewModel.portfolioValue)
+                        let quantity = viewModel.portfolio.holdings[asset.symbol] ?? 0
+                        let avgBuyPrice = viewModel.averageBuyPrice(for: asset.symbol)
+
+                        HoldingCard(
+                            asset: asset,
+                            quantity: quantity,
+                            totalValue: viewModel.portfolioValue,
+                            avgBuyPrice: avgBuyPrice
+                        )
+                        .padding(.horizontal)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.bottom)
             }
             .padding(.top)
         }
