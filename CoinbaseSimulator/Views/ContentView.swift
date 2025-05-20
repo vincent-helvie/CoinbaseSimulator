@@ -81,11 +81,11 @@ struct ContentView: View {
 
     @ViewBuilder
     func assetRow(_ asset: Asset) -> some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 if let logoURL = asset.logoURL {
                     RemoteImage(url: logoURL)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 32, height: 32)
                         .clipShape(Circle())
                 }
 
@@ -111,13 +111,6 @@ struct ContentView: View {
                     }
                 }
             }
-            .padding()
-            .background(
-                flashColor(for: asset.priceChangeDirection)
-                    .opacity(0.6)
-                    .animation(.easeOut(duration: 0.7), value: asset.flashID)
-            )
-            .cornerRadius(8)
 
             if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
                 VStack(alignment: .leading, spacing: 2) {
@@ -138,11 +131,10 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .font(.caption)
-            .padding(.vertical, 2)
+            .padding(.top, 4)
 
             let (chartData, label) = chartData(for: asset)
             AssetChartView(prices: chartData, label: label)
-                .padding(.top, 4)
 
             HStack {
                 Button("Buy $100") {
@@ -173,8 +165,14 @@ struct ContentView: View {
                 .tint(.red)
                 .disabled((viewModel.portfolio.holdings[asset.symbol] ?? 0) <= 0)
             }
-            .padding(.top, 5)
+            .padding(.top, 4)
         }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(UIColor.secondarySystemBackground))
+                .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        )
         .padding(.vertical, 6)
     }
 
