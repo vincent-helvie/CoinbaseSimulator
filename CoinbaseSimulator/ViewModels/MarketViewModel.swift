@@ -39,7 +39,7 @@ class MarketViewModel: ObservableObject {
             "SOL": ("Solana", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
             "ADA": ("Cardano", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
             "LTC": ("Litecoin", "https://assets.coingecko.com/coins/images/2/large/litecoin.png"),
-            "AVAX": ("Avalanche", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png"),
+            "AVAX": ("Avalanche", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle.png"),
             "DOGE": ("Dogecoin", "https://assets.coingecko.com/coins/images/5/large/dogecoin.png")
         ]
 
@@ -74,9 +74,11 @@ class MarketViewModel: ObservableObject {
         group.notify(queue: .main) {
             self.lastUpdated = Date()
             let snapshot = PortfolioSnapshot(timestamp: Date(), value: self.portfolioValue)
-            self.portfolioHistory.append(snapshot)
-            self.trimHistoryIfNeeded()
-            self.saveHistory()
+            if self.shouldSaveNewSnapshot(snapshot) {
+                self.portfolioHistory.append(snapshot)
+                self.trimHistoryIfNeeded()
+                self.saveHistory()
+            }
         }
     }
 
@@ -149,6 +151,11 @@ class MarketViewModel: ObservableObject {
            let decoded = try? JSONDecoder().decode([PortfolioSnapshot].self, from: data) {
             self.portfolioHistory = decoded
         }
+    }
+
+    func shouldSaveNewSnapshot(_ new: PortfolioSnapshot) -> Bool {
+        guard let last = portfolioHistory.last else { return true }
+        return !Calendar.current.isDate(last.timestamp, inSameDayAs: new.timestamp)
     }
 
     func buy(asset: Asset, amountUSD: Double) {
@@ -257,6 +264,26 @@ class MarketViewModel: ObservableObject {
         }
 
         return total
+    }
+
+    func gainPercentWithAge(since daysAgo: Int) -> (percent: Double, ageDays: Int)? {
+        guard !portfolioHistory.isEmpty else { return nil }
+
+        let targetDate = Calendar.current.date(byAdding: .day, value: -daysAgo, to: Date())!
+
+        // Find the snapshot closest to targetDate
+        let snapshot = portfolioHistory
+            .filter { $0.timestamp < Date() }
+            .min(by: { abs($0.timestamp.timeIntervalSince(targetDate)) < abs($1.timestamp.timeIntervalSince(targetDate)) })
+
+        guard let past = snapshot else { return nil }
+
+        let current = portfolioValue
+        let change = current - past.value
+        let percentChange = (change / past.value) * 100
+        let ageDays = Calendar.current.dateComponents([.day], from: past.timestamp, to: Date()).day ?? 0
+
+        return (percentChange, ageDays)
     }
 
     func saveData() {

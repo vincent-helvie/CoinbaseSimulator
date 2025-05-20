@@ -6,56 +6,56 @@ struct PortfolioDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // 💼 Summary Cards
-                HStack(spacing: 12) {
-                    SummaryCard(title: "Total Value", value: "$\(String(format: "%.2f", viewModel.portfolioValue))")
-                    SummaryCard(title: "Cash", value: "$\(String(format: "%.2f", viewModel.portfolio.balance))")
+                // 📊 Portfolio Summary
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Portfolio Value")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Text("$\(String(format: "%.2f", viewModel.portfolioValue))")
+                        .font(.title2)
+                        .bold()
+
+                    Text("Cash: $\(String(format: "%.2f", viewModel.portfolio.balance))")
+                        .font(.subheadline)
+                        .foregroundColor(.gray)
                 }
                 .padding(.horizontal)
 
-                // 📈 Realized Gains
-                SummaryCard(
-                    title: "Realized P/L",
-                    value: String(format: "%@%.2f",
-                                  viewModel.realizedGainLoss() >= 0 ? "+" : "",
-                                  viewModel.realizedGainLoss())
-                )
-                .foregroundColor(viewModel.realizedGainLoss() >= 0 ? .green : .red)
+                // 📈 Gain Cards (1D / 7D / 30D)
+                HStack(spacing: 12) {
+                    let oneDay = viewModel.gainPercentWithAge(since: 1)
+                    let sevenDay = viewModel.gainPercentWithAge(since: 7)
+                    let thirtyDay = viewModel.gainPercentWithAge(since: 30)
+
+                    GainCardView(title: "1D", percentage: oneDay?.percent, ageDays: oneDay?.ageDays)
+                    GainCardView(title: "7D", percentage: sevenDay?.percent, ageDays: sevenDay?.ageDays)
+                    GainCardView(title: "30D", percentage: thirtyDay?.percent, ageDays: thirtyDay?.ageDays)
+                }
                 .padding(.horizontal)
 
-                // 📊 Unrealized Gains
-                SummaryCard(
-                    title: "Unrealized P/L",
-                    value: String(format: "%@%.2f",
-                                  viewModel.unrealizedGainLoss() >= 0 ? "+" : "",
-                                  viewModel.unrealizedGainLoss())
-                )
-                .foregroundColor(viewModel.unrealizedGainLoss() >= 0 ? .green : .red)
-                .padding(.horizontal)
-
-                // 📉 Portfolio chart
+                // 📉 Historical Chart
                 PortfolioChartView(snapshots: viewModel.portfolioHistory)
 
-                // 🔍 Holdings
+                // 💼 Holdings
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Your Holdings")
                         .font(.headline)
                         .padding(.horizontal)
 
                     ForEach(viewModel.assets.filter { (viewModel.portfolio.holdings[$0.symbol] ?? 0) > 0 }) { asset in
-                        let quantity = viewModel.portfolio.holdings[asset.symbol] ?? 0
-                        let avgBuyPrice = viewModel.averageBuyPrice(for: asset.symbol)
+                        let qty = viewModel.portfolio.holdings[asset.symbol] ?? 0
+                        let avgPrice = viewModel.averageBuyPrice(for: asset.symbol)
 
                         HoldingCard(
                             asset: asset,
-                            quantity: quantity,
+                            quantity: qty,
                             totalValue: viewModel.portfolioValue,
-                            avgBuyPrice: avgBuyPrice
+                            avgBuyPrice: avgPrice
                         )
                         .padding(.horizontal)
                     }
                 }
-                .padding(.bottom)
             }
             .padding(.top)
         }
