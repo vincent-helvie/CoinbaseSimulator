@@ -1,10 +1,3 @@
-//
-//  TradeHistoryView.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/19/25.
-//
-
 import SwiftUI
 
 struct TradeHistoryView: View {
@@ -17,27 +10,38 @@ struct TradeHistoryView: View {
                     .foregroundColor(.gray)
             } else {
                 ForEach(viewModel.trades.sorted(by: { $0.timestamp > $1.timestamp })) { trade in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Top Row: Direction + Asset + Timestamp
                         HStack {
-                            Text(trade.isBuy ? "Buy" : "Sell")
-                                .fontWeight(.bold)
+                            Label(trade.isBuy ? "Buy" : "Sell", systemImage: trade.isBuy ? "arrow.up.circle.fill" : "arrow.down.circle.fill")
                                 .foregroundColor(trade.isBuy ? .green : .red)
+                                .fontWeight(.bold)
+
                             Text(trade.asset)
                                 .font(.subheadline)
+
                             Spacer()
-                            Text(String(format: "$%.2f", trade.price))
-                                .font(.subheadline)
+
+                            Text(trade.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                .font(.caption2)
+                                .foregroundColor(.gray)
                         }
 
-                        Text(String(format: "%.6f %@", trade.quantity, trade.asset))
+                        // Quantity and Price
+                        HStack {
+                            Text("Qty: \(String(format: "%.6f", trade.quantity))")
+                            Text("Price: $\(String(format: "%.2f", trade.price))")
+                        }
+                        .font(.caption)
+
+                        // Total USD value
+                        Text("Total: $\(String(format: "%.2f", trade.quantity * trade.price))")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        Text(trade.timestamp.formatted(date: .abbreviated, time: .shortened))
-                            .font(.caption2)
-                            .foregroundColor(.gray)
+                        // Optional gain/loss logic could go here
                     }
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                 }
             }
         }
