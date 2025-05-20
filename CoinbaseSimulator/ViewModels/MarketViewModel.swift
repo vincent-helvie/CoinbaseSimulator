@@ -39,7 +39,7 @@ class MarketViewModel: ObservableObject {
             "SOL": ("Solana", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
             "ADA": ("Cardano", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
             "LTC": ("Litecoin", "https://assets.coingecko.com/coins/images/2/large/litecoin.png"),
-            "AVAX": ("Avalanche", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle.png"),
+            "AVAX": ("Avalanche", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedWhite_Trans.png"),
             "DOGE": ("Dogecoin", "https://assets.coingecko.com/coins/images/5/large/dogecoin.png")
         ]
 
@@ -237,6 +237,26 @@ class MarketViewModel: ObservableObject {
         }
 
         return gainLoss
+    }
+
+    func unrealizedGainLoss(for symbol: String? = nil) -> Double {
+        var total: Double = 0.0
+
+        let relevantAssets = symbol != nil
+            ? assets.filter { $0.symbol == symbol }
+            : assets
+
+        for asset in relevantAssets {
+            let quantity = portfolio.holdings[asset.symbol] ?? 0
+            guard quantity > 0 else { continue }
+
+            guard let avgPrice = averageBuyPrice(for: asset.symbol) else { continue }
+
+            let gainLoss = (asset.price - avgPrice) * quantity
+            total += gainLoss
+        }
+
+        return total
     }
 
     func saveData() {
