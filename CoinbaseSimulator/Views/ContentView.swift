@@ -33,104 +33,22 @@ struct ContentView: View {
                 }
 
                 List {
-                    Section(header: Text("Assets")) {
-                        ForEach(viewModel.assets) { asset in
-                            VStack(alignment: .leading) {
-                                // Asset logo, name, symbol, price
-                                HStack(spacing: 6) {
-                                    if let logoURL = asset.logoURL {
-                                        RemoteImage(url: logoURL)
-                                            .frame(width: 24, height: 24)
-                                            .clipShape(Circle())
-                                    }
+                    let gainers = viewModel.assets.filter { ($0.percentChange ?? 0) >= 0 }
+                    let losers = viewModel.assets.filter { ($0.percentChange ?? 0) < 0 }
 
-                                    VStack(alignment: .leading) {
-                                        Text(asset.name)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                        Text(asset.symbol)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-
-                                    Spacer()
-
-                                    VStack(alignment: .trailing) {
-                                        Text(String(format: "$%.2f", asset.price))
-                                        if let change = asset.percentChange {
-                                            Text(String(format: "%@%.2f%%",
-                                                        change >= 0 ? "+" : "",
-                                                        change))
-                                            .font(.caption)
-                                            .foregroundColor(change >= 0 ? .green : .red)
-                                        }
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    flashColor(for: asset.priceChangeDirection)
-                                        .opacity(0.6)
-                                        .animation(.easeOut(duration: 0.7), value: asset.flashID)
-                                )
-                                .cornerRadius(8)
-
-                                if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text("You own \(String(format: "%.6f", qty)) \(asset.symbol)")
-                                        Text("≈ $\(String(format: "%.2f", qty * asset.price))")
-                                    }
-                                    .font(.footnote)
-                                    .foregroundColor(.secondary)
-                                }
-
-                                Picker("", selection: Binding(
-                                    get: { selectedChartRange[asset.symbol] ?? "24h" },
-                                    set: { selectedChartRange[asset.symbol] = $0 }
-                                )) {
-                                    Text("1h").tag("1h")
-                                    Text("24h").tag("24h")
-                                    Text("7d").tag("7d")
-                                }
-                                .pickerStyle(.segmented)
-                                .font(.caption)
-                                .padding(.vertical, 2)
-
-                                let (chartData, label) = chartData(for: asset)
-                                AssetChartView(prices: chartData, label: label)
-                                    .padding(.top, 4)
-
-                                HStack {
-                                    Button("Buy $100") {
-                                        selectedAsset = asset
-                                        selectedAction = .buy100
-                                    }
-                                    .buttonStyle(.borderedProminent)
-
-                                    Button("Sell $100") {
-                                        selectedAsset = asset
-                                        selectedAction = .sell100
-                                    }
-                                    .buttonStyle(.bordered)
-
-                                    Button("Buy Max") {
-                                        selectedAsset = asset
-                                        selectedAction = .buyMax
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .tint(.blue)
-                                    .disabled(viewModel.portfolio.balance <= 0)
-
-                                    Button("Sell Max") {
-                                        selectedAsset = asset
-                                        selectedAction = .sellMax
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .tint(.red)
-                                    .disabled((viewModel.portfolio.holdings[asset.symbol] ?? 0) <= 0)
-                                }
-                                .padding(.top, 5)
+                    if !gainers.isEmpty {
+                        Section(header: Text("Gainers")) {
+                            ForEach(gainers) { asset in
+                                assetRow(asset)
                             }
-                            .padding(.vertical, 6)
+                        }
+                    }
+
+                    if !losers.isEmpty {
+                        Section(header: Text("Losers")) {
+                            ForEach(losers) { asset in
+                                assetRow(asset)
+                            }
                         }
                     }
 
@@ -175,6 +93,107 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Asset Row View
+
+    @ViewBuilder
+    func assetRow(_ asset: Asset) -> some View {
+        VStack(alignment: .leading) {
+            HStack(spacing: 6) {
+                if let logoURL = asset.logoURL {
+                    RemoteImage(url: logoURL)
+                        .frame(width: 24, height: 24)
+                        .clipShape(Circle())
+                }
+
+                VStack(alignment: .leading) {
+                    Text(asset.name)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(asset.symbol)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing) {
+                    Text(String(format: "$%.2f", asset.price))
+                    if let change = asset.percentChange {
+                        Text(String(format: "%@%.2f%%",
+                                    change >= 0 ? "+" : "",
+                                    change))
+                        .font(.caption)
+                        .foregroundColor(change >= 0 ? .green : .red)
+                    }
+                }
+            }
+            .padding()
+            .background(
+                flashColor(for: asset.priceChangeDirection)
+                    .opacity(0.6)
+                    .animation(.easeOut(duration: 0.7), value: asset.flashID)
+            )
+            .cornerRadius(8)
+
+            if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("You own \(String(format: "%.6f", qty)) \(asset.symbol)")
+                    Text("≈ $\(String(format: "%.2f", qty * asset.price))")
+                }
+                .font(.footnote)
+                .foregroundColor(.secondary)
+            }
+
+            Picker("", selection: Binding(
+                get: { selectedChartRange[asset.symbol] ?? "24h" },
+                set: { selectedChartRange[asset.symbol] = $0 }
+            )) {
+                Text("1h").tag("1h")
+                Text("24h").tag("24h")
+                Text("7d").tag("7d")
+            }
+            .pickerStyle(.segmented)
+            .font(.caption)
+            .padding(.vertical, 2)
+
+            let (chartData, label) = chartData(for: asset)
+            AssetChartView(prices: chartData, label: label)
+                .padding(.top, 4)
+
+            HStack {
+                Button("Buy $100") {
+                    selectedAsset = asset
+                    selectedAction = .buy100
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Sell $100") {
+                    selectedAsset = asset
+                    selectedAction = .sell100
+                }
+                .buttonStyle(.bordered)
+
+                Button("Buy Max") {
+                    selectedAsset = asset
+                    selectedAction = .buyMax
+                }
+                .buttonStyle(.bordered)
+                .tint(.blue)
+                .disabled(viewModel.portfolio.balance <= 0)
+
+                Button("Sell Max") {
+                    selectedAsset = asset
+                    selectedAction = .sellMax
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .disabled((viewModel.portfolio.holdings[asset.symbol] ?? 0) <= 0)
+            }
+            .padding(.top, 5)
+        }
+        .padding(.vertical, 6)
     }
 
     // MARK: - Helpers

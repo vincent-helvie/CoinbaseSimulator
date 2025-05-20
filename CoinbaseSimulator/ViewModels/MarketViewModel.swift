@@ -50,46 +50,17 @@ class MarketViewModel: ObservableObject {
             let delay = DispatchTime.now() + Double(i) * 0.5
             let workItem = DispatchWorkItem {
                 self.api.fetchPrice(for: symbol) { [weak self] price in
-                    guard let self = self, let price = price else {
+                    guard let self = self else {
                         group.leave()
                         return
                     }
 
-                    self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
-                        self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
-                            self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
-                                DispatchQueue.main.async {
-                                    let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
-
-                                    if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
-                                        var updated = self.assets[index]
-                                        updated.previousPrice = updated.price
-                                        updated.price = price
-                                        updated.flashID = UUID()
-                                        updated.chartData1h = chart1h
-                                        updated.chartData24h = chart24h
-                                        updated.chartData7d = chart7d
-                                        updated.historicalPrices = chart24h
-                                        self.assets[index] = updated
-                                    } else {
-                                        let newAsset = Asset(
-                                            symbol: symbol,
-                                            name: meta.name,
-                                            logoURL: meta.logoURL,
-                                            price: price,
-                                            previousPrice: nil,
-                                            flashID: UUID(),
-                                            chartData1h: chart1h,
-                                            chartData24h: chart24h,
-                                            chartData7d: chart7d,
-                                            historicalPrices: chart24h
-                                        )
-                                        self.assets.append(newAsset)
-                                    }
-
-                                    group.leave()
-                                }
-                            }
+                    if let price = price {
+                        self.fetchAndUpdateAsset(symbol: symbol, price: price, meta: assetInfo[symbol] ?? (name: symbol, logoURL: nil), group: group)
+                    } else {
+                        print("❌ Failed to fetch price for \(symbol), retrying...")
+                        DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                            self.retryPriceLoad(symbol: symbol, meta: assetInfo[symbol] ?? (name: symbol, logoURL: nil), group: group)
                         }
                     }
                 }
@@ -103,6 +74,62 @@ class MarketViewModel: ObservableObject {
             self.isLoadingCharts = false
         }
     }
+
+    private func fetchAndUpdateAsset(symbol: String, price: Double, meta: (name: String, logoURL: String?), group: DispatchGroup) {
+        self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
+            self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
+                self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
+                    DispatchQueue.main.async {
+                        if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
+                            var updated = self.assets[index]
+                            updated.previousPrice = updated.price
+                            updated.price = price
+                            updated.flashID = UUID()
+                            updated.chartData1h = chart1h
+                            updated.chartData24h = chart24h
+                            updated.chartData7d = chart7d
+                            updated.historicalPrices = chart24h
+                            self.assets[index] = updated
+                        } else {
+                            let newAsset = Asset(
+                                symbol: symbol,
+                                name: meta.name,
+                                logoURL: meta.logoURL,
+                                price: price,
+                                previousPrice: nil,
+                                flashID: UUID(),
+                                chartData1h: chart1h,
+                                chartData24h: chart24h,
+                                chartData7d: chart7d,
+                                historicalPrices: chart24h
+                            )
+                            self.assets.append(newAsset)
+                        }
+                        group.leave()
+                    }
+                }
+            }
+        }
+    }
+
+    func retryPriceLoad(symbol: String, meta: (name: String, logoURL: String?), group: DispatchGroup) {
+        self.api.fetchPrice(for: symbol) { [weak self] retryPrice in
+            guard let self = self else {
+                group.leave()
+                return
+            }
+
+            if let retryPrice = retryPrice {
+                print("🔁 Retry succeeded for \(symbol)")
+                self.fetchAndUpdateAsset(symbol: symbol, price: retryPrice, meta: meta, group: group)
+            } else {
+                print("❌ Second failure for \(symbol)")
+                group.leave()
+            }
+        }
+    }
+
+    // --- trades and portfolio methods unchanged ---
 
     func buy(asset: Asset, amountUSD: Double) {
         let quantity = amountUSD / asset.price
