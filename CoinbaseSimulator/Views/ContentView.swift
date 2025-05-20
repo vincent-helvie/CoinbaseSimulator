@@ -36,11 +36,10 @@ struct ContentView: View {
                     Section(header: Text("Assets")) {
                         ForEach(viewModel.assets) { asset in
                             VStack(alignment: .leading) {
-                                // Asset title section with logo, name, and symbol
+                                // Asset logo, name, symbol, price
                                 HStack(spacing: 6) {
-                                    if let logo = asset.logoName {
-                                        Image(logo)
-                                            .resizable()
+                                    if let logoURL = asset.logoURL {
+                                        RemoteImage(url: logoURL)
                                             .frame(width: 24, height: 24)
                                             .clipShape(Circle())
                                     }
@@ -75,7 +74,6 @@ struct ContentView: View {
                                 )
                                 .cornerRadius(8)
 
-                                // Holdings summary
                                 if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("You own \(String(format: "%.6f", qty)) \(asset.symbol)")
@@ -85,7 +83,6 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                                 }
 
-                                // Chart picker + chart
                                 Picker("", selection: Binding(
                                     get: { selectedChartRange[asset.symbol] ?? "24h" },
                                     set: { selectedChartRange[asset.symbol] = $0 }
@@ -102,7 +99,6 @@ struct ContentView: View {
                                 AssetChartView(prices: chartData, label: label)
                                     .padding(.top, 4)
 
-                                // Buy/Sell controls
                                 HStack {
                                     Button("Buy $100") {
                                         selectedAsset = asset

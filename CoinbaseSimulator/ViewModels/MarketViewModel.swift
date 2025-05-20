@@ -31,10 +31,11 @@ class MarketViewModel: ObservableObject {
 
     func loadPrices() {
         let symbols = ["BTC", "ETH", "SOL"]
-        let assetNameMap: [String: (name: String, logo: String)] = [
-            "BTC": ("Bitcoin", "bitcoin"),
-            "ETH": ("Ethereum", "ethereum"),
-            "SOL": ("Solana", "solana")
+
+        let assetInfo: [String: (name: String, logoURL: String)] = [
+            "BTC": ("Bitcoin", "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"),
+            "ETH": ("Ethereum", "https://assets.coingecko.com/coins/images/279/large/ethereum.png"),
+            "SOL": ("Solana", "https://assets.coingecko.com/coins/images/4128/large/solana.png")
         ]
 
         DispatchQueue.main.async {
@@ -57,8 +58,8 @@ class MarketViewModel: ObservableObject {
                     self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
                         self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
                             self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
-                                let updateWork = DispatchWorkItem {
-                                    let assetMeta = assetNameMap[symbol] ?? (name: symbol, logo: nil)
+                                DispatchQueue.main.async {
+                                    let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
 
                                     if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
                                         var updated = self.assets[index]
@@ -73,8 +74,8 @@ class MarketViewModel: ObservableObject {
                                     } else {
                                         let newAsset = Asset(
                                             symbol: symbol,
-                                            name: assetMeta.name,
-                                            logoName: assetMeta.logo,
+                                            name: meta.name,
+                                            logoURL: meta.logoURL,
                                             price: price,
                                             previousPrice: nil,
                                             flashID: UUID(),
@@ -88,8 +89,6 @@ class MarketViewModel: ObservableObject {
 
                                     group.leave()
                                 }
-
-                                DispatchQueue.main.asyncAfter(deadline: .now(), execute: updateWork)
                             }
                         }
                     }
@@ -99,7 +98,6 @@ class MarketViewModel: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: delay, execute: workItem)
         }
 
-        // ✅ Final group completion — using a closure
         group.notify(queue: .main) {
             self.lastUpdated = Date()
             self.isLoadingCharts = false

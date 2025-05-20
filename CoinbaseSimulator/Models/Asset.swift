@@ -2,9 +2,9 @@ import Foundation
 
 struct Asset: Identifiable {
     let id = UUID()
-    let symbol: String         // e.g. "BTC"
-    let name: String           // e.g. "Bitcoin"
-    let logoName: String?      // e.g. "bitcoin" (must match an image in Assets.xcassets)
+    let symbol: String
+    let name: String
+    let logoURL: String?  // ✅ now using URL instead of asset name
 
     var price: Double
     var previousPrice: Double?
