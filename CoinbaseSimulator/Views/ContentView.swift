@@ -11,44 +11,36 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            VStack {
-                Text("Portfolio Value: $\(String(format: "%.2f", viewModel.portfolioValue))")
-                    .font(.headline)
-                    .padding(.top)
+            ScrollView {
+                VStack(spacing: 12) {
+                    // Portfolio summary
+                    VStack {
+                        Text("Portfolio Value: $\(String(format: "%.2f", viewModel.portfolioValue))")
+                            .font(.title3)
+                            .bold()
+                        Text("Cash Balance: $\(String(format: "%.2f", viewModel.portfolio.balance))")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
 
-                Text("Cash Balance: $\(String(format: "%.2f", viewModel.portfolio.balance))")
-                    .font(.subheadline)
+                        if let updated = viewModel.lastUpdated {
+                            Text("Last updated \(relativeTime(from: updated))")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        }
 
-                if let updated = viewModel.lastUpdated {
-                    let seconds = Int(now.timeIntervalSince(updated))
-                    let isStale = seconds > 60
-                    Text("Last updated \(relativeTime(from: updated))")
-                        .font(.caption)
-                        .foregroundColor(isStale ? .red : .secondary)
-                }
-
-                // 📈 Portfolio Line Chart
-                PortfolioChartView(snapshots: viewModel.portfolioHistory)
+                        NavigationLink("View Portfolio Detail") {
+                            PortfolioDetailView(viewModel: viewModel)
+                        }
+                        .padding(.top, 8)
+                    }
                     .padding(.horizontal)
-                    .padding(.top, 8)
 
-                List {
-                    Section(header: Text("Assets")) {
-                        ForEach(viewModel.assets) { asset in
-                            assetRow(asset)
-                        }
-                    }
-
-                    Section {
-                        NavigationLink("View Trade History") {
-                            TradeHistoryView(viewModel: viewModel)
-                        }
-                        NavigationLink("View Portfolio Chart") {
-                            PortfolioPieChartView(viewModel: viewModel)
-                        }
+                    ForEach(viewModel.assets) { asset in
+                        assetRow(asset)
+                            .padding(.horizontal)
                     }
                 }
-                .listStyle(.insetGrouped)
+                .padding(.vertical)
             }
             .navigationTitle("Crypto Simulator")
             .onAppear {
@@ -81,8 +73,6 @@ struct ContentView: View {
             }
         }
     }
-
-    // MARK: - Asset Row View
 
     @ViewBuilder
     func assetRow(_ asset: Asset) -> some View {
@@ -136,7 +126,6 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
             .font(.caption)
-            .padding(.top, 4)
 
             let (chartData, label) = chartData(for: asset)
             AssetChartView(prices: chartData, label: label)
@@ -181,8 +170,6 @@ struct ContentView: View {
         .padding(.vertical, 6)
     }
 
-    // MARK: - Helpers
-
     func chartData(for asset: Asset) -> ([Double], String) {
         let range = selectedChartRange[asset.symbol] ?? "24h"
         switch range {
@@ -199,14 +186,6 @@ struct ContentView: View {
         case .sellMax: viewModel.sellMax(asset: asset)
         case .buy100: viewModel.buy(asset: asset, amountUSD: 100)
         case .sell100: viewModel.sell(asset: asset, amountUSD: 100)
-        }
-    }
-
-    func flashColor(for direction: Asset.PriceChangeDirection) -> Color {
-        switch direction {
-        case .up: return .green.opacity(0.3)
-        case .down: return .red.opacity(0.3)
-        case .none: return .clear
         }
     }
 
