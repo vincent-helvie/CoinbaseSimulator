@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = MarketViewModel()
-    @State private var now = Date()
 
     struct TradeIntent: Identifiable {
         let id = UUID()
@@ -12,46 +11,36 @@ struct ContentView: View {
 
     @State private var activeTrade: TradeIntent?
     @State private var selectedChartRange: [String: String] = [:]
+    @State private var navigateToPortfolio = false
 
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 12) {
-                    // Portfolio summary
-                    VStack {
-                        Text("Portfolio Value: $\(String(format: "%.2f", viewModel.portfolioValue))")
-                            .font(.title3)
-                            .bold()
-                        Text("Cash Balance: $\(String(format: "%.2f", viewModel.portfolio.balance))")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        if let updated = viewModel.lastUpdated {
-                            Text("Last updated \(relativeTime(from: updated))")
-                                .font(.caption)
-                                .foregroundColor(.gray)
+                VStack(spacing: 20) {
+                    // 🔷 Header with Branding + Portfolio Info
+                    HeaderView(
+                        portfolioValue: viewModel.portfolioValue,
+                        cashBalance: viewModel.portfolio.balance,
+                        lastUpdated: viewModel.lastUpdated,
+                        onPortfolioTap: {
+                            navigateToPortfolio = true
                         }
+                    )
 
-                        NavigationLink("View Portfolio Detail") {
-                            PortfolioDetailView(viewModel: viewModel)
-                        }
-                        .padding(.top, 8)
-                    }
-                    .padding(.horizontal)
-
+                    // 📈 Asset List
                     ForEach(viewModel.assets) { asset in
                         assetRow(asset)
                             .padding(.horizontal)
                     }
+
+                    NavigationLink(destination: PortfolioDetailView(viewModel: viewModel), isActive: $navigateToPortfolio) {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
                 .padding(.vertical)
             }
-            .navigationTitle("Crypto Simulator")
-            .onAppear {
-                Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-                    now = Date()
-                }
-            }
+            .navigationBarHidden(true)
             .sheet(item: $activeTrade) { trade in
                 TradeConfirmationSheet(viewModel: viewModel, asset: trade.asset, type: trade.type)
             }
@@ -82,11 +71,9 @@ struct ContentView: View {
                 VStack(alignment: .trailing) {
                     Text(String(format: "$%.2f", asset.price))
                     if let change = asset.percentChange {
-                        Text(String(format: "%@%.2f%%",
-                                    change >= 0 ? "+" : "",
-                                    change))
-                        .font(.caption)
-                        .foregroundColor(change >= 0 ? .green : .red)
+                        Text(String(format: "%@%.2f%%", change >= 0 ? "+" : "", change))
+                            .font(.caption)
+                            .foregroundColor(change >= 0 ? .green : .red)
                     }
                 }
             }
@@ -143,18 +130,6 @@ struct ContentView: View {
         case "1h": return (asset.chartData1h, "1h trend")
         case "7d": return (asset.chartData7d, "7d trend")
         default: return (asset.chartData24h, "24h trend")
-        }
-    }
-
-    func relativeTime(from date: Date) -> String {
-        let seconds = Int(now.timeIntervalSince(date))
-        if seconds < 5 {
-            return "just now"
-        } else if seconds < 60 {
-            return "\(seconds) seconds ago"
-        } else {
-            let minutes = seconds / 60
-            return "\(minutes) minute\(minutes > 1 ? "s" : "") ago"
         }
     }
 }
