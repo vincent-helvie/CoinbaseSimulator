@@ -27,11 +27,6 @@ struct ContentView: View {
                         .foregroundColor(isStale ? .red : .secondary)
                 }
 
-                if viewModel.isLoadingCharts {
-                    ProgressView("Fetching charts...")
-                        .padding(.bottom, 8)
-                }
-
                 List {
                     Section(header: Text("Assets")) {
                         ForEach(viewModel.assets) { asset in
