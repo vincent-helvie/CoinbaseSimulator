@@ -27,6 +27,11 @@ struct ContentView: View {
                         .foregroundColor(isStale ? .red : .secondary)
                 }
 
+                // 📈 Portfolio Line Chart
+                PortfolioChartView(snapshots: viewModel.portfolioHistory)
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+
                 List {
                     Section(header: Text("Assets")) {
                         ForEach(viewModel.assets) { asset in
