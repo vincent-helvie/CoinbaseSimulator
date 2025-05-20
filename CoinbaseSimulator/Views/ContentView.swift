@@ -33,22 +33,9 @@ struct ContentView: View {
                 }
 
                 List {
-                    let gainers = viewModel.assets.filter { ($0.percentChange ?? 0) >= 0 }
-                    let losers = viewModel.assets.filter { ($0.percentChange ?? 0) < 0 }
-
-                    if !gainers.isEmpty {
-                        Section(header: Text("Gainers")) {
-                            ForEach(gainers) { asset in
-                                assetRow(asset)
-                            }
-                        }
-                    }
-
-                    if !losers.isEmpty {
-                        Section(header: Text("Losers")) {
-                            ForEach(losers) { asset in
-                                assetRow(asset)
-                            }
+                    Section(header: Text("Assets")) {
+                        ForEach(viewModel.assets) { asset in
+                            assetRow(asset)
                         }
                     }
 
