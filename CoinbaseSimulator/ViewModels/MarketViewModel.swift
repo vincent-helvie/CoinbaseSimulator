@@ -25,7 +25,6 @@ class MarketViewModel: ObservableObject {
 
     func startPriceUpdates() {
         loadPrices()
-
         timer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             self?.loadPrices()
         }
@@ -58,11 +57,11 @@ class MarketViewModel: ObservableObject {
                     }
 
                     if let price = price {
-                        let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
+                        let meta = assetInfo[symbol] ?? (symbol, nil)
                         self.fetchAndUpdateAsset(symbol: symbol, price: price, meta: meta, group: group)
                     } else {
                         DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
-                            let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
+                            let meta = assetInfo[symbol] ?? (symbol, nil)
                             self.retryPriceLoad(symbol: symbol, meta: meta, group: group)
                         }
                     }
@@ -111,7 +110,6 @@ class MarketViewModel: ObservableObject {
                             )
                             self.assets.append(newAsset)
                         }
-
                         group.leave()
                     }
                 }
@@ -160,15 +158,7 @@ class MarketViewModel: ObservableObject {
         portfolio.balance -= amountUSD
         portfolio.holdings[asset.symbol, default: 0] += quantity
 
-        let trade = Trade(
-            asset: asset.symbol,
-            isBuy: true,
-            quantity: quantity,
-            price: asset.price,
-            timestamp: Date()
-        )
-
-        trades.append(trade)
+        trades.append(Trade(asset: asset.symbol, isBuy: true, quantity: quantity, price: asset.price, timestamp: Date()))
         saveData()
     }
 
@@ -184,15 +174,7 @@ class MarketViewModel: ObservableObject {
         portfolio.balance += amountUSD
         portfolio.holdings[asset.symbol] = currentQty - quantity
 
-        let trade = Trade(
-            asset: asset.symbol,
-            isBuy: false,
-            quantity: quantity,
-            price: asset.price,
-            timestamp: Date()
-        )
-
-        trades.append(trade)
+        trades.append(Trade(asset: asset.symbol, isBuy: false, quantity: quantity, price: asset.price, timestamp: Date()))
         saveData()
     }
 
@@ -214,6 +196,47 @@ class MarketViewModel: ObservableObject {
         let totalSpent = buys.reduce(0.0) { $0 + ($1.price * $1.quantity) }
         let totalQty = buys.reduce(0.0) { $0 + $1.quantity }
         return totalQty > 0 ? totalSpent / totalQty : nil
+    }
+
+    func realizedGainLoss(for symbol: String? = nil) -> Double {
+        var gainLoss: Double = 0.0
+        let filteredTrades = symbol == nil ? trades : trades.filter { $0.asset == symbol }
+
+        var buyQueue: [String: [(quantity: Double, price: Double)]] = [:]
+
+        for trade in filteredTrades {
+            if trade.isBuy {
+                buyQueue[trade.asset, default: []].append((quantity: trade.quantity, price: trade.price))
+            } else {
+                var remaining = trade.quantity
+                var costBasis = 0.0
+
+                var queue = buyQueue[trade.asset] ?? []
+                var newQueue: [(quantity: Double, price: Double)] = []
+
+                for (qty, price) in queue {
+                    if remaining <= 0 {
+                        newQueue.append((qty, price))
+                        continue
+                    }
+
+                    let usedQty = min(qty, remaining)
+                    costBasis += usedQty * price
+                    remaining -= usedQty
+
+                    let leftoverQty = qty - usedQty
+                    if leftoverQty > 0 {
+                        newQueue.append((leftoverQty, price))
+                    }
+                }
+
+                buyQueue[trade.asset] = newQueue
+                let proceeds = trade.quantity * trade.price
+                gainLoss += proceeds - costBasis
+            }
+        }
+
+        return gainLoss
     }
 
     func saveData() {

@@ -12,6 +12,15 @@ struct PortfolioDetailView: View {
                 }
                 .padding(.horizontal)
 
+                SummaryCard(
+                    title: "Realized P/L",
+                    value: String(format: "%@%.2f",
+                                  viewModel.realizedGainLoss() >= 0 ? "+" : "",
+                                  viewModel.realizedGainLoss())
+                )
+                .padding(.horizontal)
+                .foregroundColor(viewModel.realizedGainLoss() >= 0 ? .green : .red)
+
                 PortfolioChartView(snapshots: viewModel.portfolioHistory)
 
                 VStack(alignment: .leading, spacing: 12) {
