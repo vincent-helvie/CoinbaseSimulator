@@ -48,6 +48,15 @@ struct ContentView: View {
                                 )
                                 .cornerRadius(8)
 
+                                if let holdingQty = viewModel.portfolio.holdings[asset.symbol], holdingQty > 0 {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("You own \(String(format: "%.6f", holdingQty)) \(asset.symbol)")
+                                        Text("≈ $\(String(format: "%.2f", holdingQty * asset.price))")
+                                    }
+                                    .font(.footnote)
+                                    .foregroundColor(.secondary)
+                                }
+
                                 HStack {
                                     Button("Buy $100") {
                                         viewModel.buy(asset: asset, amountUSD: 100)
@@ -58,6 +67,20 @@ struct ContentView: View {
                                         viewModel.sell(asset: asset, amountUSD: 100)
                                     }
                                     .buttonStyle(.bordered)
+
+                                    Button("Buy Max") {
+                                        viewModel.buyMax(asset: asset)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .tint(.blue)
+                                    .disabled(viewModel.portfolio.balance <= 0)
+
+                                    Button("Sell Max") {
+                                        viewModel.sellMax(asset: asset)
+                                    }
+                                    .buttonStyle(.bordered)
+                                    .tint(.red)
+                                    .disabled((viewModel.portfolio.holdings[asset.symbol] ?? 0) <= 0)
                                 }
                                 .padding(.top, 5)
                             }
@@ -69,6 +92,9 @@ struct ContentView: View {
                         NavigationLink("View Trade History") {
                             TradeHistoryView(viewModel: viewModel)
                         }
+                        NavigationLink("View Portfolio Chart") {
+                            PortfolioPieChartView(viewModel: viewModel)
+                        }
                     }
                 }
                 .listStyle(InsetGroupedListStyle())
@@ -76,8 +102,6 @@ struct ContentView: View {
             .navigationTitle("Crypto Simulator")
         }
     }
-
-    // MARK: - Background Flash Color
 
     func flashColor(for direction: Asset.PriceChangeDirection) -> Color {
         switch direction {

@@ -46,7 +46,7 @@ class MarketViewModel: ObservableObject {
                         var updatedAsset = self.assets[index]
                         updatedAsset.previousPrice = updatedAsset.price
                         updatedAsset.price = price
-                        updatedAsset.flashID = UUID() // Trigger animation
+                        updatedAsset.flashID = UUID()
                         self.assets[index] = updatedAsset
                     } else {
                         let newAsset = Asset(symbol: symbol, name: symbol, price: price, previousPrice: nil)
@@ -80,6 +80,10 @@ class MarketViewModel: ObservableObject {
         saveData()
     }
 
+    func buyMax(asset: Asset) {
+        buy(asset: asset, amountUSD: portfolio.balance)
+    }
+
     func sell(asset: Asset, amountUSD: Double) {
         let quantity = amountUSD / asset.price
         let currentQty = portfolio.holdings[asset.symbol, default: 0]
@@ -98,6 +102,13 @@ class MarketViewModel: ObservableObject {
 
         trades.append(trade)
         saveData()
+    }
+
+    func sellMax(asset: Asset) {
+        let quantity = portfolio.holdings[asset.symbol] ?? 0
+        guard quantity > 0 else { return }
+        let amountUSD = quantity * asset.price
+        sell(asset: asset, amountUSD: amountUSD)
     }
 
     var portfolioValue: Double {
