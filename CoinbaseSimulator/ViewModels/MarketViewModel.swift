@@ -5,6 +5,7 @@ class MarketViewModel: ObservableObject {
     @Published var portfolio = Portfolio(balance: 10000.0, holdings: [:])
     @Published var trades: [Trade] = []
     @Published var lastUpdated: Date?
+    @Published var isLoadingCharts: Bool = false
 
     private let api = CoinbaseAPI()
     private let tradesKey = "simulated_trades"
@@ -30,54 +31,78 @@ class MarketViewModel: ObservableObject {
 
     func loadPrices() {
         let symbols = ["BTC", "ETH", "SOL"]
+        let assetNameMap: [String: (name: String, logo: String)] = [
+            "BTC": ("Bitcoin", "bitcoin"),
+            "ETH": ("Ethereum", "ethereum"),
+            "SOL": ("Solana", "solana")
+        ]
+
+        DispatchQueue.main.async {
+            self.isLoadingCharts = true
+        }
+
         let group = DispatchGroup()
 
-        for symbol in symbols {
+        for (i, symbol) in symbols.enumerated() {
             group.enter()
-            api.fetchPrice(for: symbol) { [weak self] price in
-                guard let self = self, let price = price else {
-                    group.leave()
-                    return
-                }
 
-                self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
-                    self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
-                        self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
-                            DispatchQueue.main.async {
-                                if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
-                                    var updatedAsset = self.assets[index]
-                                    updatedAsset.previousPrice = updatedAsset.price
-                                    updatedAsset.price = price
-                                    updatedAsset.flashID = UUID()
-                                    updatedAsset.chartData1h = chart1h
-                                    updatedAsset.chartData24h = chart24h
-                                    updatedAsset.chartData7d = chart7d
-                                    updatedAsset.historicalPrices = chart24h
-                                    self.assets[index] = updatedAsset
-                                } else {
-                                    let newAsset = Asset(
-                                        symbol: symbol,
-                                        name: symbol,
-                                        price: price,
-                                        previousPrice: nil,
-                                        flashID: UUID(),
-                                        chartData1h: chart1h,
-                                        chartData24h: chart24h,
-                                        chartData7d: chart7d,
-                                        historicalPrices: chart24h
-                                    )
-                                    self.assets.append(newAsset)
+            let delay = DispatchTime.now() + Double(i) * 0.5
+            let workItem = DispatchWorkItem {
+                self.api.fetchPrice(for: symbol) { [weak self] price in
+                    guard let self = self, let price = price else {
+                        group.leave()
+                        return
+                    }
+
+                    self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
+                        self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
+                            self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
+                                let updateWork = DispatchWorkItem {
+                                    let assetMeta = assetNameMap[symbol] ?? (name: symbol, logo: nil)
+
+                                    if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
+                                        var updated = self.assets[index]
+                                        updated.previousPrice = updated.price
+                                        updated.price = price
+                                        updated.flashID = UUID()
+                                        updated.chartData1h = chart1h
+                                        updated.chartData24h = chart24h
+                                        updated.chartData7d = chart7d
+                                        updated.historicalPrices = chart24h
+                                        self.assets[index] = updated
+                                    } else {
+                                        let newAsset = Asset(
+                                            symbol: symbol,
+                                            name: assetMeta.name,
+                                            logoName: assetMeta.logo,
+                                            price: price,
+                                            previousPrice: nil,
+                                            flashID: UUID(),
+                                            chartData1h: chart1h,
+                                            chartData24h: chart24h,
+                                            chartData7d: chart7d,
+                                            historicalPrices: chart24h
+                                        )
+                                        self.assets.append(newAsset)
+                                    }
+
+                                    group.leave()
                                 }
-                                group.leave()
+
+                                DispatchQueue.main.asyncAfter(deadline: .now(), execute: updateWork)
                             }
                         }
                     }
                 }
             }
+
+            DispatchQueue.main.asyncAfter(deadline: delay, execute: workItem)
         }
 
-        group.notify(queue: .main) { [weak self] in
-            self?.lastUpdated = Date()
+        // ✅ Final group completion — using a closure
+        group.notify(queue: .main) {
+            self.lastUpdated = Date()
+            self.isLoadingCharts = false
         }
     }
 

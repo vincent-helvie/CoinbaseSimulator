@@ -1,16 +1,11 @@
-//
-//  Asset.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/19/25.
-//
-
 import Foundation
 
 struct Asset: Identifiable {
     let id = UUID()
-    let symbol: String
-    let name: String
+    let symbol: String         // e.g. "BTC"
+    let name: String           // e.g. "Bitcoin"
+    let logoName: String?      // e.g. "bitcoin" (must match an image in Assets.xcassets)
+
     var price: Double
     var previousPrice: Double?
     var flashID = UUID()
@@ -18,7 +13,7 @@ struct Asset: Identifiable {
     var chartData1h: [Double] = []
     var chartData24h: [Double] = []
     var chartData7d: [Double] = []
-    var historicalPrices: [Double] = [] // Used for default view
+    var historicalPrices: [Double] = []
 
     var priceChangeDirection: PriceChangeDirection {
         guard let previous = previousPrice else { return .none }

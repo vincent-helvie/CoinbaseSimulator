@@ -20,18 +20,39 @@ struct ContentView: View {
                     .font(.subheadline)
 
                 if let updated = viewModel.lastUpdated {
+                    let seconds = Int(now.timeIntervalSince(updated))
+                    let isStale = seconds > 60
                     Text("Last updated \(relativeTime(from: updated))")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(isStale ? .red : .secondary)
+                }
+
+                if viewModel.isLoadingCharts {
+                    ProgressView("Fetching charts...")
+                        .padding(.bottom, 8)
                 }
 
                 List {
                     Section(header: Text("Assets")) {
                         ForEach(viewModel.assets) { asset in
                             VStack(alignment: .leading) {
-                                HStack {
-                                    Text(asset.symbol)
-                                        .fontWeight(.bold)
+                                // Asset title section with logo, name, and symbol
+                                HStack(spacing: 6) {
+                                    if let logo = asset.logoName {
+                                        Image(logo)
+                                            .resizable()
+                                            .frame(width: 24, height: 24)
+                                            .clipShape(Circle())
+                                    }
+
+                                    VStack(alignment: .leading) {
+                                        Text(asset.name)
+                                            .font(.subheadline)
+                                            .fontWeight(.semibold)
+                                        Text(asset.symbol)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
 
                                     Spacer()
 
@@ -54,6 +75,7 @@ struct ContentView: View {
                                 )
                                 .cornerRadius(8)
 
+                                // Holdings summary
                                 if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("You own \(String(format: "%.6f", qty)) \(asset.symbol)")
@@ -63,6 +85,7 @@ struct ContentView: View {
                                     .foregroundColor(.secondary)
                                 }
 
+                                // Chart picker + chart
                                 Picker("", selection: Binding(
                                     get: { selectedChartRange[asset.symbol] ?? "24h" },
                                     set: { selectedChartRange[asset.symbol] = $0 }
@@ -76,10 +99,10 @@ struct ContentView: View {
                                 .padding(.vertical, 2)
 
                                 let (chartData, label) = chartData(for: asset)
-
                                 AssetChartView(prices: chartData, label: label)
                                     .padding(.top, 4)
 
+                                // Buy/Sell controls
                                 HStack {
                                     Button("Buy $100") {
                                         selectedAsset = asset
