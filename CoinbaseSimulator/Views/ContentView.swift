@@ -4,10 +4,10 @@ struct ContentView: View {
     @StateObject private var viewModel = MarketViewModel()
     @State private var now = Date()
 
-    // MARK: - Alert State
     enum TradeAction { case buyMax, sellMax, buy100, sell100 }
     @State private var selectedAsset: Asset?
     @State private var selectedAction: TradeAction?
+    @State private var selectedChartRange: [String: String] = [:]
 
     var body: some View {
         NavigationView {
@@ -37,7 +37,6 @@ struct ContentView: View {
 
                                     VStack(alignment: .trailing) {
                                         Text(String(format: "$%.2f", asset.price))
-
                                         if let change = asset.percentChange {
                                             Text(String(format: "%@%.2f%%",
                                                         change >= 0 ? "+" : "",
@@ -55,14 +54,31 @@ struct ContentView: View {
                                 )
                                 .cornerRadius(8)
 
-                                if let holdingQty = viewModel.portfolio.holdings[asset.symbol], holdingQty > 0 {
+                                if let qty = viewModel.portfolio.holdings[asset.symbol], qty > 0 {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text("You own \(String(format: "%.6f", holdingQty)) \(asset.symbol)")
-                                        Text("≈ $\(String(format: "%.2f", holdingQty * asset.price))")
+                                        Text("You own \(String(format: "%.6f", qty)) \(asset.symbol)")
+                                        Text("≈ $\(String(format: "%.2f", qty * asset.price))")
                                     }
                                     .font(.footnote)
                                     .foregroundColor(.secondary)
                                 }
+
+                                Picker("", selection: Binding(
+                                    get: { selectedChartRange[asset.symbol] ?? "24h" },
+                                    set: { selectedChartRange[asset.symbol] = $0 }
+                                )) {
+                                    Text("1h").tag("1h")
+                                    Text("24h").tag("24h")
+                                    Text("7d").tag("7d")
+                                }
+                                .pickerStyle(.segmented)
+                                .font(.caption)
+                                .padding(.vertical, 2)
+
+                                let (chartData, label) = chartData(for: asset)
+
+                                AssetChartView(prices: chartData, label: label)
+                                    .padding(.top, 4)
 
                                 HStack {
                                     Button("Buy $100") {
@@ -108,7 +124,7 @@ struct ContentView: View {
                         }
                     }
                 }
-                .listStyle(InsetGroupedListStyle())
+                .listStyle(.insetGrouped)
             }
             .navigationTitle("Crypto Simulator")
             .onAppear {
@@ -116,8 +132,6 @@ struct ContentView: View {
                     now = Date()
                 }
             }
-
-            // MARK: - Alert Handling
             .alert("Confirm Trade", isPresented: Binding(
                 get: { selectedAsset != nil && selectedAction != nil },
                 set: { if !$0 { selectedAsset = nil; selectedAction = nil } }
@@ -144,25 +158,32 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Helpers
+
+    func chartData(for asset: Asset) -> ([Double], String) {
+        let range = selectedChartRange[asset.symbol] ?? "24h"
+        switch range {
+        case "1h": return (asset.chartData1h, "1h trend")
+        case "7d": return (asset.chartData7d, "7d trend")
+        default: return (asset.chartData24h, "24h trend")
+        }
+    }
+
     func handleTrade(asset: Asset) {
         guard let action = selectedAction else { return }
         switch action {
-        case .buyMax:
-            viewModel.buyMax(asset: asset)
-        case .sellMax:
-            viewModel.sellMax(asset: asset)
-        case .buy100:
-            viewModel.buy(asset: asset, amountUSD: 100)
-        case .sell100:
-            viewModel.sell(asset: asset, amountUSD: 100)
+        case .buyMax: viewModel.buyMax(asset: asset)
+        case .sellMax: viewModel.sellMax(asset: asset)
+        case .buy100: viewModel.buy(asset: asset, amountUSD: 100)
+        case .sell100: viewModel.sell(asset: asset, amountUSD: 100)
         }
     }
 
     func flashColor(for direction: Asset.PriceChangeDirection) -> Color {
         switch direction {
-        case .up: return Color.green.opacity(0.3)
-        case .down: return Color.red.opacity(0.3)
-        case .none: return Color.clear
+        case .up: return .green.opacity(0.3)
+        case .down: return .red.opacity(0.3)
+        case .none: return .clear
         }
     }
 

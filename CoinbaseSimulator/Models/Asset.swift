@@ -13,7 +13,12 @@ struct Asset: Identifiable {
     let name: String
     var price: Double
     var previousPrice: Double?
-    var flashID = UUID() // Triggers fade animation
+    var flashID = UUID()
+
+    var chartData1h: [Double] = []
+    var chartData24h: [Double] = []
+    var chartData7d: [Double] = []
+    var historicalPrices: [Double] = [] // Used for default view
 
     var priceChangeDirection: PriceChangeDirection {
         guard let previous = previousPrice else { return .none }

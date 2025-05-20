@@ -45,9 +45,30 @@ class MarketViewModel: ObservableObject {
                         updatedAsset.previousPrice = updatedAsset.price
                         updatedAsset.price = price
                         updatedAsset.flashID = UUID()
+
+                        updatedAsset.chartData1h = (0..<12).map { _ in price * (0.99 + Double.random(in: 0...0.02)) }
+                        updatedAsset.chartData24h = (0..<24).map { _ in price * (0.98 + Double.random(in: 0...0.04)) }
+                        updatedAsset.chartData7d = (0..<7).map { _ in price * (0.95 + Double.random(in: 0...0.1)) }
+                        updatedAsset.historicalPrices = updatedAsset.chartData24h
+
                         self.assets[index] = updatedAsset
                     } else {
-                        let newAsset = Asset(symbol: symbol, name: symbol, price: price, previousPrice: nil)
+                        let chart1h = (0..<12).map { _ in price * (0.99 + Double.random(in: 0...0.02)) }
+                        let chart24h = (0..<24).map { _ in price * (0.98 + Double.random(in: 0...0.04)) }
+                        let chart7d = (0..<7).map { _ in price * (0.95 + Double.random(in: 0...0.1)) }
+
+                        let newAsset = Asset(
+                            symbol: symbol,
+                            name: symbol,
+                            price: price,
+                            previousPrice: nil,
+                            flashID: UUID(),
+                            chartData1h: chart1h,
+                            chartData24h: chart24h,
+                            chartData7d: chart7d,
+                            historicalPrices: chart24h
+                        )
+
                         self.assets.append(newAsset)
                     }
                 }
