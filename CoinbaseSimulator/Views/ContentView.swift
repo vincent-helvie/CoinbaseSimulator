@@ -13,9 +13,10 @@ struct ContentView: View {
                 Text("Cash Balance: $\(String(format: "%.2f", viewModel.portfolio.balance))")
                     .font(.subheadline)
 
-                if viewModel.isLoading {
-                    ProgressView("Fetching Prices...")
-                        .padding()
+                if let updated = viewModel.lastUpdated {
+                    Text("Last updated: \(updated.formatted(date: .omitted, time: .shortened))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
 
                 List {

@@ -4,7 +4,7 @@ class MarketViewModel: ObservableObject {
     @Published var assets: [Asset] = []
     @Published var portfolio = Portfolio(balance: 10000.0, holdings: [:])
     @Published var trades: [Trade] = []
-    @Published var isLoading: Bool = false
+    @Published var lastUpdated: Date?
 
     private let api = CoinbaseAPI()
     private let tradesKey = "simulated_trades"
@@ -29,8 +29,6 @@ class MarketViewModel: ObservableObject {
     }
 
     func loadPrices() {
-        isLoading = true
-
         let symbols = ["BTC", "ETH", "SOL"]
         let group = DispatchGroup()
 
@@ -57,7 +55,7 @@ class MarketViewModel: ObservableObject {
         }
 
         group.notify(queue: .main) { [weak self] in
-            self?.isLoading = false
+            self?.lastUpdated = Date()
         }
     }
 
