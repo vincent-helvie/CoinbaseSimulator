@@ -35,41 +35,42 @@ class MarketViewModel: ObservableObject {
         for symbol in symbols {
             group.enter()
             api.fetchPrice(for: symbol) { [weak self] price in
-                defer { group.leave() }
+                guard let self = self, let price = price else {
+                    group.leave()
+                    return
+                }
 
-                guard let self = self, let price = price else { return }
-
-                DispatchQueue.main.async {
-                    if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
-                        var updatedAsset = self.assets[index]
-                        updatedAsset.previousPrice = updatedAsset.price
-                        updatedAsset.price = price
-                        updatedAsset.flashID = UUID()
-
-                        updatedAsset.chartData1h = (0..<12).map { _ in price * (0.99 + Double.random(in: 0...0.02)) }
-                        updatedAsset.chartData24h = (0..<24).map { _ in price * (0.98 + Double.random(in: 0...0.04)) }
-                        updatedAsset.chartData7d = (0..<7).map { _ in price * (0.95 + Double.random(in: 0...0.1)) }
-                        updatedAsset.historicalPrices = updatedAsset.chartData24h
-
-                        self.assets[index] = updatedAsset
-                    } else {
-                        let chart1h = (0..<12).map { _ in price * (0.99 + Double.random(in: 0...0.02)) }
-                        let chart24h = (0..<24).map { _ in price * (0.98 + Double.random(in: 0...0.04)) }
-                        let chart7d = (0..<7).map { _ in price * (0.95 + Double.random(in: 0...0.1)) }
-
-                        let newAsset = Asset(
-                            symbol: symbol,
-                            name: symbol,
-                            price: price,
-                            previousPrice: nil,
-                            flashID: UUID(),
-                            chartData1h: chart1h,
-                            chartData24h: chart24h,
-                            chartData7d: chart7d,
-                            historicalPrices: chart24h
-                        )
-
-                        self.assets.append(newAsset)
+                self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
+                    self.api.fetchHistoricalPrices(symbol: symbol, interval: 3600) { chart24h in
+                        self.api.fetchHistoricalPrices(symbol: symbol, interval: 86400) { chart7d in
+                            DispatchQueue.main.async {
+                                if let index = self.assets.firstIndex(where: { $0.symbol == symbol }) {
+                                    var updatedAsset = self.assets[index]
+                                    updatedAsset.previousPrice = updatedAsset.price
+                                    updatedAsset.price = price
+                                    updatedAsset.flashID = UUID()
+                                    updatedAsset.chartData1h = chart1h
+                                    updatedAsset.chartData24h = chart24h
+                                    updatedAsset.chartData7d = chart7d
+                                    updatedAsset.historicalPrices = chart24h
+                                    self.assets[index] = updatedAsset
+                                } else {
+                                    let newAsset = Asset(
+                                        symbol: symbol,
+                                        name: symbol,
+                                        price: price,
+                                        previousPrice: nil,
+                                        flashID: UUID(),
+                                        chartData1h: chart1h,
+                                        chartData24h: chart24h,
+                                        chartData7d: chart7d,
+                                        historicalPrices: chart24h
+                                    )
+                                    self.assets.append(newAsset)
+                                }
+                                group.leave()
+                            }
+                        }
                     }
                 }
             }

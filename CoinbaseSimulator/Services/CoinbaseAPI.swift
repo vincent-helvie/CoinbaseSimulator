@@ -1,38 +1,40 @@
-//
-//  CoinbaseAPI.swift
-//  CoinbaseSimulator
-//
-//  Created by vincent helvie on 5/19/25.
-//
-
 import Foundation
 
 class CoinbaseAPI {
     func fetchPrice(for symbol: String, completion: @escaping (Double?) -> Void) {
-        let urlString = "https://api.coinbase.com/v2/prices/\(symbol)-USD/spot"
-        guard let url = URL(string: urlString) else {
-            completion(nil)
-            return
-        }
-
-        URLSession.shared.dataTask(with: url) { data, _, error in
-            guard let data = data, error == nil else {
+        let url = URL(string: "https://api.coinbase.com/v2/prices/\(symbol)-USD/spot")!
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let dataDict = json["data"] as? [String: Any],
+                  let amountString = dataDict["amount"] as? String,
+                  let amount = Double(amountString) else {
                 completion(nil)
                 return
             }
+            completion(amount)
+        }.resume()
+    }
 
-            do {
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let dataDict = json["data"] as? [String: Any],
-                   let amountStr = dataDict["amount"] as? String,
-                   let price = Double(amountStr) {
-                    completion(price)
-                } else {
-                    completion(nil)
-                }
-            } catch {
-                completion(nil)
+    func fetchHistoricalPrices(symbol: String, interval: Int, completion: @escaping ([Double]) -> Void) {
+        let productID = "\(symbol)-USD"
+        let url = URL(string: "https://api.exchange.coinbase.com/products/\(productID)/candles?granularity=\(interval)")!
+
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [[Any]] else {
+                completion([])
+                return
             }
+
+            let closes = json
+                .sorted { ($0[0] as? Double ?? 0) < ($1[0] as? Double ?? 0) }
+                .compactMap { $0[4] as? Double }
+
+            completion(closes)
         }.resume()
     }
 }
