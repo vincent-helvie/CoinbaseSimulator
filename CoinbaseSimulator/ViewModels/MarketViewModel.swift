@@ -21,6 +21,8 @@ class MarketViewModel: ObservableObject {
         timer?.invalidate()
     }
 
+    // MARK: - Price Refresh Loop
+
     func startPriceUpdates() {
         loadPrices()
 
@@ -29,13 +31,19 @@ class MarketViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Load Prices from Coinbase
+
     func loadPrices() {
-        let symbols = ["BTC", "ETH", "SOL"]
+        let symbols = ["BTC", "ETH", "SOL", "ADA", "LTC", "AVAX", "DOGE"]
 
         let assetInfo: [String: (name: String, logoURL: String)] = [
             "BTC": ("Bitcoin", "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"),
             "ETH": ("Ethereum", "https://assets.coingecko.com/coins/images/279/large/ethereum.png"),
-            "SOL": ("Solana", "https://assets.coingecko.com/coins/images/4128/large/solana.png")
+            "SOL": ("Solana", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
+            "ADA": ("Cardano", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
+            "LTC": ("Litecoin", "https://assets.coingecko.com/coins/images/2/large/litecoin.png"),
+            "AVAX": ("Avalanche", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle.png"),
+            "DOGE": ("Dogecoin", "https://assets.coingecko.com/coins/images/5/large/dogecoin.png")
         ]
 
         DispatchQueue.main.async {
@@ -56,11 +64,13 @@ class MarketViewModel: ObservableObject {
                     }
 
                     if let price = price {
-                        self.fetchAndUpdateAsset(symbol: symbol, price: price, meta: assetInfo[symbol] ?? (name: symbol, logoURL: nil), group: group)
+                        let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
+                        self.fetchAndUpdateAsset(symbol: symbol, price: price, meta: meta, group: group)
                     } else {
                         print("❌ Failed to fetch price for \(symbol), retrying...")
                         DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
-                            self.retryPriceLoad(symbol: symbol, meta: assetInfo[symbol] ?? (name: symbol, logoURL: nil), group: group)
+                            let meta = assetInfo[symbol] ?? (name: symbol, logoURL: nil)
+                            self.retryPriceLoad(symbol: symbol, meta: meta, group: group)
                         }
                     }
                 }
@@ -74,6 +84,8 @@ class MarketViewModel: ObservableObject {
             self.isLoadingCharts = false
         }
     }
+
+    // MARK: - Fetch Price + Historical Data
 
     private func fetchAndUpdateAsset(symbol: String, price: Double, meta: (name: String, logoURL: String?), group: DispatchGroup) {
         self.api.fetchHistoricalPrices(symbol: symbol, interval: 300) { chart1h in
@@ -105,6 +117,7 @@ class MarketViewModel: ObservableObject {
                             )
                             self.assets.append(newAsset)
                         }
+
                         group.leave()
                     }
                 }
@@ -129,7 +142,7 @@ class MarketViewModel: ObservableObject {
         }
     }
 
-    // --- trades and portfolio methods unchanged ---
+    // MARK: - Trading
 
     func buy(asset: Asset, amountUSD: Double) {
         let quantity = amountUSD / asset.price
@@ -187,6 +200,8 @@ class MarketViewModel: ObservableObject {
             return total + (qty * asset.price)
         }
     }
+
+    // MARK: - Persistence
 
     func saveData() {
         if let encodedTrades = try? JSONEncoder().encode(trades) {
