@@ -4,9 +4,13 @@ struct ContentView: View {
     @StateObject private var viewModel = MarketViewModel()
     @State private var now = Date()
 
-    enum TradeAction { case buyMax, sellMax, buy100, sell100 }
-    @State private var selectedAsset: Asset?
-    @State private var selectedAction: TradeAction?
+    struct TradeIntent: Identifiable {
+        let id = UUID()
+        let asset: Asset
+        let type: TradeType
+    }
+
+    @State private var activeTrade: TradeIntent?
     @State private var selectedChartRange: [String: String] = [:]
 
     var body: some View {
@@ -48,28 +52,8 @@ struct ContentView: View {
                     now = Date()
                 }
             }
-            .alert("Confirm Trade", isPresented: Binding(
-                get: { selectedAsset != nil && selectedAction != nil },
-                set: { if !$0 { selectedAsset = nil; selectedAction = nil } }
-            ), presenting: selectedAsset) { asset in
-                Button("Confirm", role: .destructive) {
-                    handleTrade(asset: asset)
-                }
-                Button("Cancel", role: .cancel) { }
-            } message: { asset in
-                switch selectedAction {
-                case .buyMax:
-                    Text("Buy max \(asset.symbol) for $\(String(format: "%.2f", viewModel.portfolio.balance))?")
-                case .sellMax:
-                    let qty = viewModel.portfolio.holdings[asset.symbol] ?? 0
-                    Text("Sell all \(String(format: "%.6f", qty)) \(asset.symbol)?")
-                case .buy100:
-                    Text("Buy $100 of \(asset.symbol)?")
-                case .sell100:
-                    Text("Sell $100 of \(asset.symbol)?")
-                case .none:
-                    Text("Invalid action.")
-                }
+            .sheet(item: $activeTrade) { trade in
+                TradeConfirmationSheet(viewModel: viewModel, asset: trade.asset, type: trade.type)
             }
         }
     }
@@ -131,33 +115,16 @@ struct ContentView: View {
             AssetChartView(prices: chartData, label: label)
 
             HStack {
-                Button("Buy $100") {
-                    selectedAsset = asset
-                    selectedAction = .buy100
+                Button("Buy") {
+                    activeTrade = TradeIntent(asset: asset, type: .buy)
                 }
                 .buttonStyle(.borderedProminent)
 
-                Button("Sell $100") {
-                    selectedAsset = asset
-                    selectedAction = .sell100
-                }
-                .buttonStyle(.bordered)
-
-                Button("Buy Max") {
-                    selectedAsset = asset
-                    selectedAction = .buyMax
-                }
-                .buttonStyle(.bordered)
-                .tint(.blue)
-                .disabled(viewModel.portfolio.balance <= 0)
-
-                Button("Sell Max") {
-                    selectedAsset = asset
-                    selectedAction = .sellMax
+                Button("Sell") {
+                    activeTrade = TradeIntent(asset: asset, type: .sell)
                 }
                 .buttonStyle(.bordered)
                 .tint(.red)
-                .disabled((viewModel.portfolio.holdings[asset.symbol] ?? 0) <= 0)
             }
             .padding(.top, 4)
         }
@@ -176,16 +143,6 @@ struct ContentView: View {
         case "1h": return (asset.chartData1h, "1h trend")
         case "7d": return (asset.chartData7d, "7d trend")
         default: return (asset.chartData24h, "24h trend")
-        }
-    }
-
-    func handleTrade(asset: Asset) {
-        guard let action = selectedAction else { return }
-        switch action {
-        case .buyMax: viewModel.buyMax(asset: asset)
-        case .sellMax: viewModel.sellMax(asset: asset)
-        case .buy100: viewModel.buy(asset: asset, amountUSD: 100)
-        case .sell100: viewModel.sell(asset: asset, amountUSD: 100)
         }
     }
 
