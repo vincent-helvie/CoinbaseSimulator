@@ -6,7 +6,7 @@ struct PortfolioDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // 📊 Portfolio Summary
+                // 💼 Portfolio Summary
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Portfolio Value")
                         .font(.caption)
@@ -22,7 +22,7 @@ struct PortfolioDetailView: View {
                 }
                 .padding(.horizontal)
 
-                // 📈 Gain Cards (1D / 7D / 30D)
+                // 📈 Gain Cards
                 HStack(spacing: 12) {
                     let oneDay = viewModel.gainPercentWithAge(since: 1)
                     let sevenDay = viewModel.gainPercentWithAge(since: 7)
@@ -34,10 +34,18 @@ struct PortfolioDetailView: View {
                 }
                 .padding(.horizontal)
 
-                // 📉 Historical Chart
+                // 📉 Portfolio Chart
                 PortfolioChartView(snapshots: viewModel.portfolioHistory)
 
-                // 💼 Holdings
+                // 🔗 Trade History Link
+                VStack(alignment: .leading, spacing: 4) {
+                    NavigationLink("View Trade History") {
+                        TradeHistoryView(viewModel: viewModel)
+                    }
+                    .padding(.horizontal)
+                }
+
+                // 📋 Holdings List
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Your Holdings")
                         .font(.headline)

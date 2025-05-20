@@ -29,9 +29,22 @@
 		27E141D02DDA77E4009C2CEE /* CoinbaseSimulatorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CoinbaseSimulatorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		27E142BB2DDD2778009C2CEE /* Exceptions for "CoinbaseSimulator" folder in "CoinbaseSimulator" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Views/Untitled.swift,
+			);
+			target = 27E141B82DDA77E2009C2CEE /* CoinbaseSimulator */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		27E141BB2DDA77E2009C2CEE /* CoinbaseSimulator */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				27E142BB2DDD2778009C2CEE /* Exceptions for "CoinbaseSimulator" folder in "CoinbaseSimulator" target */,
+			);
 			path = CoinbaseSimulator;
 			sourceTree = "<group>";
 		};
