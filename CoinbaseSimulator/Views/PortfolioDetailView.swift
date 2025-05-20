@@ -19,10 +19,16 @@ struct PortfolioDetailView: View {
                     Text("Cash: $\(String(format: "%.2f", viewModel.portfolio.balance))")
                         .font(.subheadline)
                         .foregroundColor(.gray)
+
+                    // 🔁 Total Gain/Loss Summary
+                    GainSummaryView(
+                        realized: viewModel.realizedGainLoss(),
+                        unrealized: viewModel.unrealizedGainLoss()
+                    )
                 }
                 .padding(.horizontal)
 
-                // 📈 Gain Cards
+                // 📈 Gain Cards (1D / 7D / 30D)
                 HStack(spacing: 12) {
                     let oneDay = viewModel.gainPercentWithAge(since: 1)
                     let sevenDay = viewModel.gainPercentWithAge(since: 7)
@@ -37,11 +43,12 @@ struct PortfolioDetailView: View {
                 // 📉 Portfolio Chart
                 PortfolioChartView(snapshots: viewModel.portfolioHistory)
 
-                // 🔗 Trade History Link
+                // 📜 Trade History Link
                 VStack(alignment: .leading, spacing: 4) {
                     NavigationLink("View Trade History") {
                         TradeHistoryView(viewModel: viewModel)
                     }
+                    .font(.caption)
                     .padding(.horizontal)
                 }
 
